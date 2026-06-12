@@ -1,0 +1,72 @@
+# =========================
+# Java / Maven
+# =========================
+target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# =========================
+# Maven Wrapper
+# =========================
+.mvn/wrapper/maven-wrapper.jar
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+
+# =========================
+# Environment files
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Spring Boot
+# =========================
+application-local.properties
+application-dev.properties
+application-prod.properties
+
+# =========================
+# IDEs
+# =========================
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# =========================
+# Test / Coverage
+# =========================
+coverage/
+htmlcov/
+jacoco.exec
+
+# =========================
+# Node / Frontend future
+# =========================
+node_modules/
+dist/
+build/
