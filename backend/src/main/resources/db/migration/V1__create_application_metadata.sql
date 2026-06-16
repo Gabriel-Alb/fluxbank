@@ -1,0 +1,15 @@
+CREATE TABLE application_metadata (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    metadata_key VARCHAR(100) NOT NULL UNIQUE,
+    metadata_value VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO application_metadata (
+    metadata_key,
+    metadata_value
+)
+VALUES (
+    'database_status',
+    'initialized'
+);
