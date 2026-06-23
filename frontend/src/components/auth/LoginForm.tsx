@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   mdiAlertCircleOutline,
-  mdiCheckCircleOutline,
   mdiEmailOutline,
   mdiEyeOffOutline,
   mdiEyeOutline,
@@ -12,6 +11,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { AxiosError } from 'axios'
 import { useForm, type SubmitHandler } from 'react-hook-form'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { login } from '../../features/auth/authApi'
 import { authKeys } from '../../features/auth/authKeys'
@@ -31,6 +31,12 @@ const loginSchema = z.object({
 })
 
 type LoginFormData = z.infer<typeof loginSchema>
+
+interface LocationState {
+  from?: {
+    pathname?: string
+  }
+}
 
 function getLoginErrorMessage(error: unknown) {
   const axiosError = error as AxiosError<ApiErrorResponse>
@@ -61,9 +67,13 @@ function getLoginErrorMessage(error: unknown) {
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
+  const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
+
+  const locationState = location.state as LocationState | null
+  const redirectTo = locationState?.from?.pathname ?? '/dashboard'
 
   const loginMutation = useMutation({
     mutationFn: login,
@@ -73,7 +83,9 @@ export function LoginForm() {
         user: response.user,
       })
 
-      setSuccessMessage('Login realizado com sucesso.')
+      navigate(redirectTo, {
+        replace: true,
+      })
     },
   })
 
@@ -103,8 +115,6 @@ export function LoginForm() {
   }, [loginMutation.error])
 
   const onSubmit: SubmitHandler<LoginFormData> = async (data) => {
-    setSuccessMessage(null)
-
     await loginMutation.mutateAsync({
       email: data.email,
       password: data.password,
@@ -152,25 +162,6 @@ export function LoginForm() {
             </span>
 
             <span>{submitErrorMessage}</span>
-          </div>
-        )}
-
-        {successMessage && (
-          <div
-            role="status"
-            className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-700"
-          >
-            <span
-              aria-hidden="true"
-              className="mt-0.5 shrink-0"
-            >
-              <AppIcon
-                path={mdiCheckCircleOutline}
-                size={0.9}
-              />
-            </span>
-
-            <span>{successMessage}</span>
           </div>
         )}
 
