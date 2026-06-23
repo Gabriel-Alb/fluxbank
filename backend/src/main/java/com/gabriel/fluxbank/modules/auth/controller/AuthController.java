@@ -44,6 +44,15 @@ public class AuthController {
         );
     }
 
+    @GetMapping("/session")
+    public ResponseEntity<SessionStatusResponse> session(
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+                authService.getCurrentSession(authentication)
+        );
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
             HttpServletRequest servletRequest,

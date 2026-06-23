@@ -48,6 +48,10 @@ public class SecurityConfig {
                                 "/api/auth/me"
                         ).permitAll()
                         .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/auth/session"
+                        ).permitAll()
+                        .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/auth/logout"
                         ).permitAll()
