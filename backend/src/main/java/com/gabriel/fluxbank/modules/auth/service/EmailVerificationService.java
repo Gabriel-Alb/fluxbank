@@ -5,13 +5,17 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Base64;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.gabriel.fluxbank.exception.BusinessException;
+import com.gabriel.fluxbank.modules.auth.dto.response.EmailVerificationResponse;
 import com.gabriel.fluxbank.modules.auth.entity.EmailVerificationToken;
 import com.gabriel.fluxbank.modules.auth.repository.EmailVerificationTokenRepository;
 import com.gabriel.fluxbank.modules.user.entity.User;
+import com.gabriel.fluxbank.modules.user.enums.UserStatus;
 import com.gabriel.fluxbank.shared.security.DataProtectionService;
 
 @Service
@@ -66,6 +70,77 @@ public class EmailVerificationService {
         throw new IllegalStateException(
                 "Unable to generate a unique email verification token"
         );
+    }
+
+    @Transactional
+    public EmailVerificationResponse verifyEmail(String rawToken) {
+        String normalizedToken = normalizeToken(rawToken);
+
+        byte[] tokenHash = dataProtectionService.createLookupHash(
+                normalizedToken
+        );
+
+        EmailVerificationToken verificationToken = tokenRepository
+                .findByTokenHash(tokenHash)
+                .orElseThrow(() -> new BusinessException(
+                        "Invalid email verification token",
+                        HttpStatus.BAD_REQUEST
+                ));
+
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+
+        if (verificationToken.isUsed()) {
+            throw new BusinessException(
+                    "Email verification token has already been used",
+                    HttpStatus.CONFLICT
+            );
+        }
+
+        if (verificationToken.isExpired(now)) {
+            throw new BusinessException(
+                    "Email verification token has expired",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        User user = verificationToken.getUser();
+
+        validateUserCanBeVerified(user);
+
+        verificationToken.markAsUsed();
+        user.markEmailAsVerified();
+
+        return new EmailVerificationResponse(
+                true,
+                "Email verified successfully"
+        );
+    }
+
+    private void validateUserCanBeVerified(User user) {
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw new BusinessException(
+                    "User account is suspended",
+                    HttpStatus.FORBIDDEN
+            );
+        }
+
+        if (user.getStatus() == UserStatus.DEACTIVATED) {
+            throw new BusinessException(
+                    "User account is deactivated",
+                    HttpStatus.FORBIDDEN
+            );
+        }
+    }
+
+    private String normalizeToken(String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) {
+            throw new BusinessException(
+                    "Verification token is required",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        return rawToken.trim();
     }
 
     private String generateRawToken() {

@@ -8,10 +8,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.gabriel.fluxbank.modules.auth.dto.request.EmailVerificationRequest;
 import com.gabriel.fluxbank.modules.auth.dto.request.LoginRequest;
+import com.gabriel.fluxbank.modules.auth.dto.response.EmailVerificationResponse;
 import com.gabriel.fluxbank.modules.auth.dto.response.LoginResponse;
 import com.gabriel.fluxbank.modules.auth.dto.response.SessionStatusResponse;
 import com.gabriel.fluxbank.modules.auth.service.AuthService;
+import com.gabriel.fluxbank.modules.auth.service.EmailVerificationService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -24,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 public class AuthController {
 
     private final AuthService authService;
+    private final EmailVerificationService emailVerificationService;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(
@@ -61,5 +65,14 @@ public class AuthController {
         authService.logout(servletRequest, servletResponse);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/email-verification/verify")
+    public ResponseEntity<EmailVerificationResponse> verifyEmail(
+            @Valid @RequestBody EmailVerificationRequest request
+    ) {
+        return ResponseEntity.ok(
+                emailVerificationService.verifyEmail(request.token())
+        );
     }
 }

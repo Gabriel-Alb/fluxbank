@@ -123,4 +123,12 @@ public class User extends AuditableEntity {
         this.failedLoginAttempts = 0;
         this.passwordChangedAt = OffsetDateTime.now(ZoneOffset.UTC);
     }
+
+    public void markEmailAsVerified() {
+        this.emailVerified = true;
+
+        if (this.status == UserStatus.PENDING_VERIFICATION) {
+            this.status = UserStatus.ACTIVE;
+        }
+    }
 }
