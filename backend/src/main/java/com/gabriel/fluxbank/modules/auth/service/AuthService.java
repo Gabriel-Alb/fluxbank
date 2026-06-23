@@ -193,6 +193,14 @@ public class AuthService {
                     HttpStatus.FORBIDDEN
             );
         }
+
+        if (user.getStatus() == UserStatus.PENDING_VERIFICATION
+                || !user.isEmailVerified()) {
+            throw new BusinessException(
+                    "Email verification is required before login",
+                    HttpStatus.FORBIDDEN
+            );
+        }
     }
 
     private BusinessException invalidCredentials() {
