@@ -298,6 +298,16 @@ export function LoginForm() {
           </Link>
         </p>
 
+        <p className="text-sm text-slate-500">
+          Precisa verificar seu e-mail?{" "}
+          <Link
+            to="/resend-verification"
+            className="font-semibold text-[#1C274C] underline-offset-4 transition-colors hover:text-[#26345e] hover:underline"
+          >
+            Reenviar verificação
+          </Link>
+        </p>
+
         <p className="text-xs leading-5 text-slate-400">
           Seus dados são protegidos e utilizados somente para acessar sua conta.
         </p>
