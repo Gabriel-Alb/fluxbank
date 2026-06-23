@@ -47,6 +47,10 @@ public class SecurityConfig {
                                 HttpMethod.GET,
                                 "/api/auth/me"
                         ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/auth/logout"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(httpBasic -> httpBasic.disable())

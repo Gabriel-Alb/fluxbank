@@ -26,14 +26,19 @@ import com.gabriel.fluxbank.modules.user.repository.UserRepository;
 import com.gabriel.fluxbank.modules.user.util.UserInputNormalizer;
 import com.gabriel.fluxbank.shared.security.DataProtectionService;
 
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 @Service
 public class AuthService {
 
-    private static final String INVALID_CREDENTIALS_MESSAGE
-            = "Invalid email or password";
+    private static final String INVALID_CREDENTIALS_MESSAGE =
+            "Invalid email or password";
+
+    private static final String SESSION_COOKIE_NAME =
+            "FLUXBANK_SESSION";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -61,8 +66,8 @@ public class AuthService {
                 request.email()
         );
 
-        byte[] emailLookupHash
-                = dataProtectionService.createLookupHash(normalizedEmail);
+        byte[] emailLookupHash =
+                dataProtectionService.createLookupHash(normalizedEmail);
 
         User user = userRepository
                 .findByEmailLookupHash(emailLookupHash)
@@ -108,6 +113,21 @@ public class AuthService {
         return new SessionStatusResponse(true, user);
     }
 
+    public void logout(
+            HttpServletRequest servletRequest,
+            HttpServletResponse servletResponse
+    ) {
+        SecurityContextHolder.clearContext();
+
+        HttpSession session = servletRequest.getSession(false);
+
+        if (session != null) {
+            session.invalidate();
+        }
+
+        expireSessionCookie(servletResponse);
+    }
+
     private void createAuthenticatedSession(
             User user,
             HttpServletRequest servletRequest
@@ -116,24 +136,36 @@ public class AuthService {
 
         servletRequest.changeSessionId();
 
-        Authentication authentication
-                = new UsernamePasswordAuthenticationToken(
+        Authentication authentication =
+                new UsernamePasswordAuthenticationToken(
                         user.getId().toString(),
                         null,
                         List.of(new SimpleGrantedAuthority("ROLE_USER"))
                 );
 
-        SecurityContext securityContext
-                = SecurityContextHolder.createEmptyContext();
+        SecurityContext securityContext =
+                SecurityContextHolder.createEmptyContext();
 
         securityContext.setAuthentication(authentication);
 
         SecurityContextHolder.setContext(securityContext);
 
         session.setAttribute(
-                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                HttpSessionSecurityContextRepository
+                        .SPRING_SECURITY_CONTEXT_KEY,
                 securityContext
         );
+    }
+
+    private void expireSessionCookie(
+            HttpServletResponse servletResponse
+    ) {
+        Cookie cookie = new Cookie(SESSION_COOKIE_NAME, "");
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+
+        servletResponse.addCookie(cookie);
     }
 
     private UUID extractUserId(Authentication authentication) {

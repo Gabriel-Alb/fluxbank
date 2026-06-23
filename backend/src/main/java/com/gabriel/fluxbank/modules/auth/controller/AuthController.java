@@ -14,6 +14,7 @@ import com.gabriel.fluxbank.modules.auth.dto.response.SessionStatusResponse;
 import com.gabriel.fluxbank.modules.auth.service.AuthService;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -41,5 +42,15 @@ public class AuthController {
         return ResponseEntity.ok(
                 authService.getCurrentSession(authentication)
         );
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            HttpServletRequest servletRequest,
+            HttpServletResponse servletResponse
+    ) {
+        authService.logout(servletRequest, servletResponse);
+
+        return ResponseEntity.noContent().build();
     }
 }
