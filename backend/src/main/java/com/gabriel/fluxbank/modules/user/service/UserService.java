@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.gabriel.fluxbank.exception.BusinessException;
+import com.gabriel.fluxbank.modules.auth.service.EmailVerificationService;
 import com.gabriel.fluxbank.modules.user.dto.request.CreateUserRequest;
 import com.gabriel.fluxbank.modules.user.dto.response.UserResponse;
 import com.gabriel.fluxbank.modules.user.entity.User;
@@ -25,17 +26,20 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final DataProtectionService dataProtectionService;
     private final UserMapper userMapper;
+    private final EmailVerificationService emailVerificationService;
 
     public UserService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             DataProtectionService dataProtectionService,
-            UserMapper userMapper
+            UserMapper userMapper,
+            EmailVerificationService emailVerificationService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.dataProtectionService = dataProtectionService;
         this.userMapper = userMapper;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @Transactional
@@ -100,6 +104,8 @@ public class UserService {
 
         try {
             User savedUser = userRepository.saveAndFlush(user);
+
+            emailVerificationService.generateVerificationToken(savedUser);
 
             return userMapper.toResponse(savedUser);
         } catch (DataIntegrityViolationException exception) {

@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import org.springframework.jdbc.core.JdbcTemplate;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -43,6 +44,7 @@ class UserControllerIntegrationTest {
         String cpf = uniqueCpf();
 
         mockMvc.perform(post("/api/users")
+                        .with(csrf())
                         .contentType(APPLICATION_JSON)
                         .content(validPayload(
                                 "  Gabriel   Silva  ",
@@ -132,6 +134,7 @@ class UserControllerIntegrationTest {
                 """;
 
         mockMvc.perform(post("/api/users")
+                        .with(csrf())
                         .contentType(APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isBadRequest())
@@ -158,6 +161,7 @@ class UserControllerIntegrationTest {
         );
 
         mockMvc.perform(post("/api/users")
+                        .with(csrf())
                         .contentType(APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isBadRequest())
@@ -172,6 +176,7 @@ class UserControllerIntegrationTest {
         String email = uniqueEmail();
 
         mockMvc.perform(post("/api/users")
+                        .with(csrf())
                         .contentType(APPLICATION_JSON)
                         .content(validPayload(
                                 "Gabriel Silva",
@@ -181,6 +186,7 @@ class UserControllerIntegrationTest {
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/users")
+                        .with(csrf())
                         .contentType(APPLICATION_JSON)
                         .content(validPayload(
                                 "Outro Usuário",
@@ -198,6 +204,7 @@ class UserControllerIntegrationTest {
         String cpf = uniqueCpf();
 
         mockMvc.perform(post("/api/users")
+                        .with(csrf())
                         .contentType(APPLICATION_JSON)
                         .content(validPayload(
                                 "Gabriel Silva",
@@ -207,6 +214,7 @@ class UserControllerIntegrationTest {
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/users")
+                        .with(csrf())
                         .contentType(APPLICATION_JSON)
                         .content(validPayload(
                                 "Outro Usuário",
@@ -222,6 +230,7 @@ class UserControllerIntegrationTest {
     @Test
     void shouldRejectMalformedJson() throws Exception {
         mockMvc.perform(post("/api/users")
+                        .with(csrf())
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {
