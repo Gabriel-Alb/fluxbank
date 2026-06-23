@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.gabriel.fluxbank.modules.auth.dto.request.EmailVerificationRequest;
+import com.gabriel.fluxbank.modules.auth.dto.request.EmailVerificationResendRequest;
 import com.gabriel.fluxbank.modules.auth.dto.request.LoginRequest;
+import com.gabriel.fluxbank.modules.auth.dto.response.EmailVerificationResendResponse;
 import com.gabriel.fluxbank.modules.auth.dto.response.EmailVerificationResponse;
 import com.gabriel.fluxbank.modules.auth.dto.response.LoginResponse;
 import com.gabriel.fluxbank.modules.auth.dto.response.SessionStatusResponse;
@@ -73,6 +75,17 @@ public class AuthController {
     ) {
         return ResponseEntity.ok(
                 emailVerificationService.verifyEmail(request.token())
+        );
+    }
+
+    @PostMapping("/email-verification/resend")
+    public ResponseEntity<EmailVerificationResendResponse> resendEmailVerification(
+            @Valid @RequestBody EmailVerificationResendRequest request
+    ) {
+        return ResponseEntity.ok(
+                emailVerificationService.resendVerificationEmail(
+                        request.email()
+                )
         );
     }
 }

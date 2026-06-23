@@ -62,6 +62,9 @@ public class EmailVerificationToken {
     @Column(name = "used_at")
     private OffsetDateTime usedAt;
 
+    @Column(name = "revoked_at")
+    private OffsetDateTime revokedAt;
+
     @Column(
             name = "created_at",
             nullable = false,
@@ -84,12 +87,20 @@ public class EmailVerificationToken {
         return usedAt != null;
     }
 
+    public boolean isRevoked() {
+        return revokedAt != null;
+    }
+
     public boolean isExpired(OffsetDateTime now) {
         return !expiresAt.isAfter(now);
     }
 
     public void markAsUsed() {
         this.usedAt = OffsetDateTime.now(ZoneOffset.UTC);
+    }
+
+    public void markAsRevoked() {
+        this.revokedAt = OffsetDateTime.now(ZoneOffset.UTC);
     }
 
     public byte[] getTokenHash() {

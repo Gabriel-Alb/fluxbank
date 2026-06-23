@@ -59,6 +59,10 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/auth/email-verification/verify"
                         ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/auth/email-verification/resend"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(httpBasic -> httpBasic.disable())
