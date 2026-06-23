@@ -2,6 +2,7 @@ package com.gabriel.fluxbank.modules.auth.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.gabriel.fluxbank.modules.auth.dto.request.EmailVerificationRequest;
 import com.gabriel.fluxbank.modules.auth.dto.request.EmailVerificationResendRequest;
 import com.gabriel.fluxbank.modules.auth.dto.request.LoginRequest;
+import com.gabriel.fluxbank.modules.auth.dto.response.CsrfTokenResponse;
 import com.gabriel.fluxbank.modules.auth.dto.response.EmailVerificationResendResponse;
 import com.gabriel.fluxbank.modules.auth.dto.response.EmailVerificationResponse;
 import com.gabriel.fluxbank.modules.auth.dto.response.LoginResponse;
@@ -30,6 +32,19 @@ public class AuthController {
 
     private final AuthService authService;
     private final EmailVerificationService emailVerificationService;
+
+    @GetMapping("/csrf")
+    public ResponseEntity<CsrfTokenResponse> csrf(
+            CsrfToken csrfToken
+    ) {
+        return ResponseEntity.ok(
+                new CsrfTokenResponse(
+                        csrfToken.getHeaderName(),
+                        csrfToken.getParameterName(),
+                        csrfToken.getToken()
+                )
+        );
+    }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(

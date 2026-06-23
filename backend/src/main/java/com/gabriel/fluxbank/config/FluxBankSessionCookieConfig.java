@@ -17,6 +17,7 @@ public class FluxBankSessionCookieConfig {
 
             sessionCookieConfig.setName(SESSION_COOKIE_NAME);
             sessionCookieConfig.setHttpOnly(true);
+            sessionCookieConfig.setSecure(false);
             sessionCookieConfig.setPath("/");
         };
     }
