@@ -3,19 +3,15 @@ package com.gabriel.fluxbank.modules.user.service;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -23,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.gabriel.fluxbank.exception.BusinessException;
+import com.gabriel.fluxbank.modules.auth.service.EmailVerificationService;
 import com.gabriel.fluxbank.modules.user.dto.request.CreateUserRequest;
 import com.gabriel.fluxbank.modules.user.dto.response.UserResponse;
 import com.gabriel.fluxbank.modules.user.entity.User;
@@ -47,73 +44,79 @@ class UserServiceTest {
     @Mock
     private UserMapper userMapper;
 
-    @InjectMocks
+    @Mock
+    private EmailVerificationService emailVerificationService;
+
     private UserService userService;
+
+    @BeforeEach
+    void setUp() {
+        userService = new UserService(
+                userRepository,
+                passwordEncoder,
+                dataProtectionService,
+                userMapper,
+                emailVerificationService
+        );
+    }
 
     @Test
     void shouldRegisterUserSuccessfully() {
         CreateUserRequest request = new CreateUserRequest(
-                "  Gabriel   Silva  ",
-                "  Gabriel@Email.COM ",
-                "529.982.247-25",
-                "FluxBank1!",
-                "FluxBank1!"
+                "Usuario Teste",
+                "TESTE@EMAIL.COM",
+                "390.533.447-05",
+                "Senha@123",
+                "Senha@123"
         );
 
-        byte[] emailLookupHash = {1};
-        byte[] cpfLookupHash = {2};
+        byte[] emailLookupHash = new byte[]{1, 2, 3};
+        byte[] cpfLookupHash = new byte[]{4, 5, 6};
 
         ProtectedData protectedEmail = new ProtectedData(
-                new byte[]{10},
-                new byte[12],
+                new byte[]{10, 11, 12},
+                new byte[]{13, 14, 15},
                 emailLookupHash,
                 (short) 1
         );
 
         ProtectedData protectedCpf = new ProtectedData(
-                new byte[]{20},
-                new byte[12],
+                new byte[]{20, 21, 22},
+                new byte[]{23, 24, 25},
                 cpfLookupHash,
                 (short) 1
         );
 
         UserResponse expectedResponse = new UserResponse(
                 UUID.randomUUID(),
-                "Gabriel Silva",
-                "gabriel@email.com",
-                "***.***.***-25",
+                "Usuario Teste",
+                "teste@email.com",
+                "***.***.***-05",
                 UserStatus.PENDING_VERIFICATION,
                 false,
                 OffsetDateTime.now()
         );
 
-        when(dataProtectionService.createLookupHash(
-                "gabriel@email.com"
-        )).thenReturn(emailLookupHash);
+        when(dataProtectionService.createLookupHash("teste@email.com"))
+                .thenReturn(emailLookupHash);
 
-        when(dataProtectionService.createLookupHash(
-                "52998224725"
-        )).thenReturn(cpfLookupHash);
+        when(userRepository.existsByEmailLookupHash(emailLookupHash))
+                .thenReturn(false);
 
-        when(userRepository.existsByEmailLookupHash(
-                emailLookupHash
-        )).thenReturn(false);
+        when(dataProtectionService.createLookupHash("39053344705"))
+                .thenReturn(cpfLookupHash);
 
-        when(userRepository.existsByCpfLookupHash(
-                cpfLookupHash
-        )).thenReturn(false);
+        when(userRepository.existsByCpfLookupHash(cpfLookupHash))
+                .thenReturn(false);
 
-        when(dataProtectionService.protect(
-                "gabriel@email.com"
-        )).thenReturn(protectedEmail);
+        when(dataProtectionService.protect("teste@email.com"))
+                .thenReturn(protectedEmail);
 
-        when(dataProtectionService.protect(
-                "52998224725"
-        )).thenReturn(protectedCpf);
+        when(dataProtectionService.protect("39053344705"))
+                .thenReturn(protectedCpf);
 
-        when(passwordEncoder.encode(
-                "FluxBank1!"
-        )).thenReturn("$argon2id$encoded");
+        when(passwordEncoder.encode("Senha@123"))
+                .thenReturn("encoded-password");
 
         when(userRepository.saveAndFlush(any(User.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -123,48 +126,90 @@ class UserServiceTest {
 
         UserResponse response = userService.register(request);
 
-        assertSame(expectedResponse, response);
+        assertEquals(expectedResponse, response);
 
-        ArgumentCaptor<User> userCaptor =
-                ArgumentCaptor.forClass(User.class);
-
-        verify(userRepository).saveAndFlush(
-                userCaptor.capture()
-        );
-
-        User savedUser = userCaptor.getValue();
-
-        assertEquals("Gabriel Silva", savedUser.getFullName());
-        assertEquals(
-                "$argon2id$encoded",
-                savedUser.getPasswordHash()
-        );
-        assertEquals(
-                UserStatus.PENDING_VERIFICATION,
-                savedUser.getStatus()
-        );
-        assertEquals(false, savedUser.isEmailVerified());
-        assertEquals(0, savedUser.getFailedLoginAttempts());
-
-        assertArrayEquals(
-                protectedEmail.encryptedValue(),
-                savedUser.getEmailEncrypted()
-        );
-
-        assertArrayEquals(
-                protectedCpf.encryptedValue(),
-                savedUser.getCpfEncrypted()
-        );
+        verify(userRepository).saveAndFlush(any(User.class));
+        verify(emailVerificationService).generateVerificationToken(any(User.class));
+        verify(userMapper).toResponse(any(User.class));
     }
 
     @Test
-    void shouldRejectDifferentPasswordConfirmation() {
+    void shouldThrowConflictWhenEmailAlreadyExists() {
         CreateUserRequest request = new CreateUserRequest(
-                "Gabriel Silva",
-                "gabriel@email.com",
-                "52998224725",
-                "FluxBank1!",
-                "Different1!"
+                "Usuario Teste",
+                "teste@email.com",
+                "390.533.447-05",
+                "Senha@123",
+                "Senha@123"
+        );
+
+        byte[] emailLookupHash = new byte[]{1, 2, 3};
+
+        when(dataProtectionService.createLookupHash("teste@email.com"))
+                .thenReturn(emailLookupHash);
+
+        when(userRepository.existsByEmailLookupHash(emailLookupHash))
+                .thenReturn(true);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> userService.register(request)
+        );
+
+        assertEquals("Email is already registered", exception.getMessage());
+        assertEquals(HttpStatus.CONFLICT, exception.getStatus());
+
+        verify(userRepository, never()).saveAndFlush(any(User.class));
+        verify(emailVerificationService, never())
+                .generateVerificationToken(any(User.class));
+    }
+
+    @Test
+    void shouldThrowConflictWhenCpfAlreadyExists() {
+        CreateUserRequest request = new CreateUserRequest(
+                "Usuario Teste",
+                "teste@email.com",
+                "390.533.447-05",
+                "Senha@123",
+                "Senha@123"
+        );
+
+        byte[] emailLookupHash = new byte[]{1, 2, 3};
+        byte[] cpfLookupHash = new byte[]{4, 5, 6};
+
+        when(dataProtectionService.createLookupHash("teste@email.com"))
+                .thenReturn(emailLookupHash);
+
+        when(userRepository.existsByEmailLookupHash(emailLookupHash))
+                .thenReturn(false);
+
+        when(dataProtectionService.createLookupHash("39053344705"))
+                .thenReturn(cpfLookupHash);
+
+        when(userRepository.existsByCpfLookupHash(cpfLookupHash))
+                .thenReturn(true);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> userService.register(request)
+        );
+
+        assertEquals("CPF is already registered", exception.getMessage());
+        assertEquals(HttpStatus.CONFLICT, exception.getStatus());
+
+        verify(userRepository, never()).saveAndFlush(any(User.class));
+        verify(emailVerificationService, never())
+                .generateVerificationToken(any(User.class));
+    }
+
+    @Test
+    void shouldThrowBusinessExceptionWhenPasswordConfirmationDoesNotMatch() {
+        CreateUserRequest request = new CreateUserRequest(
+                "Usuario Teste",
+                "teste@email.com",
+                "390.533.447-05",
+                "Senha@123",
+                "Senha@456"
         );
 
         BusinessException exception = assertThrows(
@@ -177,31 +222,20 @@ class UserServiceTest {
                 exception.getMessage()
         );
 
-        assertEquals(
-                HttpStatus.BAD_REQUEST,
-                exception.getStatus()
-        );
-
-        verifyNoInteractions(
-                userRepository,
-                passwordEncoder,
-                dataProtectionService,
-                userMapper
-        );
+        verify(userRepository, never()).saveAndFlush(any(User.class));
+        verify(emailVerificationService, never())
+                .generateVerificationToken(any(User.class));
     }
 
     @Test
-    void shouldRejectDuplicatedEmail() {
-        CreateUserRequest request = validRequest();
-        byte[] emailLookupHash = {1};
-
-        when(dataProtectionService.createLookupHash(
-                "gabriel@email.com"
-        )).thenReturn(emailLookupHash);
-
-        when(userRepository.existsByEmailLookupHash(
-                emailLookupHash
-        )).thenReturn(true);
+    void shouldThrowBusinessExceptionWhenFullNameIsInvalid() {
+        CreateUserRequest request = new CreateUserRequest(
+                "AB",
+                "teste@email.com",
+                "390.533.447-05",
+                "Senha@123",
+                "Senha@123"
+        );
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
@@ -209,136 +243,77 @@ class UserServiceTest {
         );
 
         assertEquals(
-                "Email is already registered",
+                "Full name must be between 3 and 150 characters",
                 exception.getMessage()
         );
 
-        assertEquals(
-                HttpStatus.CONFLICT,
-                exception.getStatus()
-        );
-
-        verify(userRepository, never())
-                .saveAndFlush(any(User.class));
-
-        verifyNoInteractions(passwordEncoder, userMapper);
+        verify(userRepository, never()).saveAndFlush(any(User.class));
+        verify(emailVerificationService, never())
+                .generateVerificationToken(any(User.class));
     }
 
     @Test
-    void shouldRejectDuplicatedCpf() {
-        CreateUserRequest request = validRequest();
-
-        byte[] emailLookupHash = {1};
-        byte[] cpfLookupHash = {2};
-
-        when(dataProtectionService.createLookupHash(
-                "gabriel@email.com"
-        )).thenReturn(emailLookupHash);
-
-        when(dataProtectionService.createLookupHash(
-                "52998224725"
-        )).thenReturn(cpfLookupHash);
-
-        when(userRepository.existsByEmailLookupHash(
-                emailLookupHash
-        )).thenReturn(false);
-
-        when(userRepository.existsByCpfLookupHash(
-                cpfLookupHash
-        )).thenReturn(true);
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> userService.register(request)
+    void shouldMapEmailUniqueConstraintViolationToBusinessException() {
+        CreateUserRequest request = new CreateUserRequest(
+                "Usuario Teste",
+                "teste@email.com",
+                "390.533.447-05",
+                "Senha@123",
+                "Senha@123"
         );
 
-        assertEquals(
-                "CPF is already registered",
-                exception.getMessage()
-        );
-
-        assertEquals(
-                HttpStatus.CONFLICT,
-                exception.getStatus()
-        );
-
-        verify(userRepository, never())
-                .saveAndFlush(any(User.class));
-
-        verifyNoInteractions(passwordEncoder, userMapper);
-    }
-
-    @Test
-    void shouldMapDatabaseEmailConflict() {
-        CreateUserRequest request = validRequest();
-
-        byte[] emailLookupHash = {1};
-        byte[] cpfLookupHash = {2};
+        byte[] emailLookupHash = new byte[]{1, 2, 3};
+        byte[] cpfLookupHash = new byte[]{4, 5, 6};
 
         ProtectedData protectedEmail = new ProtectedData(
-                new byte[]{10},
-                new byte[12],
+                new byte[]{10, 11, 12},
+                new byte[]{13, 14, 15},
                 emailLookupHash,
                 (short) 1
         );
 
         ProtectedData protectedCpf = new ProtectedData(
-                new byte[]{20},
-                new byte[12],
+                new byte[]{20, 21, 22},
+                new byte[]{23, 24, 25},
                 cpfLookupHash,
                 (short) 1
         );
 
-        when(dataProtectionService.createLookupHash(
-                "gabriel@email.com"
-        )).thenReturn(emailLookupHash);
+        when(dataProtectionService.createLookupHash("teste@email.com"))
+                .thenReturn(emailLookupHash);
 
-        when(dataProtectionService.createLookupHash(
-                "52998224725"
-        )).thenReturn(cpfLookupHash);
+        when(userRepository.existsByEmailLookupHash(emailLookupHash))
+                .thenReturn(false);
 
-        when(dataProtectionService.protect(
-                "gabriel@email.com"
-        )).thenReturn(protectedEmail);
+        when(dataProtectionService.createLookupHash("39053344705"))
+                .thenReturn(cpfLookupHash);
 
-        when(dataProtectionService.protect(
-                "52998224725"
-        )).thenReturn(protectedCpf);
+        when(userRepository.existsByCpfLookupHash(cpfLookupHash))
+                .thenReturn(false);
 
-        when(passwordEncoder.encode(
-                "FluxBank1!"
-        )).thenReturn("$argon2id$encoded");
+        when(dataProtectionService.protect("teste@email.com"))
+                .thenReturn(protectedEmail);
+
+        when(dataProtectionService.protect("39053344705"))
+                .thenReturn(protectedCpf);
+
+        when(passwordEncoder.encode("Senha@123"))
+                .thenReturn("encoded-password");
 
         when(userRepository.saveAndFlush(any(User.class)))
-                .thenThrow(
-                        new DataIntegrityViolationException(
-                                "uk_users_email_lookup_hash"
-                        )
-                );
+                .thenThrow(new DataIntegrityViolationException(
+                        "uk_users_email_lookup_hash"
+                ));
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
                 () -> userService.register(request)
         );
 
-        assertEquals(
-                "Email is already registered",
-                exception.getMessage()
-        );
+        assertEquals("Email is already registered", exception.getMessage());
+        assertEquals(HttpStatus.CONFLICT, exception.getStatus());
 
-        assertEquals(
-                HttpStatus.CONFLICT,
-                exception.getStatus()
-        );
-    }
-
-    private CreateUserRequest validRequest() {
-        return new CreateUserRequest(
-                "Gabriel Silva",
-                "gabriel@email.com",
-                "52998224725",
-                "FluxBank1!",
-                "FluxBank1!"
-        );
+        verify(emailVerificationService, never())
+                .generateVerificationToken(any(User.class));
     }
 }

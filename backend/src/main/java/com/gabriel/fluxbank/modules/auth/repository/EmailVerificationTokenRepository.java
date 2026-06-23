@@ -11,4 +11,6 @@ public interface EmailVerificationTokenRepository
         extends JpaRepository<EmailVerificationToken, UUID> {
 
     Optional<EmailVerificationToken> findByTokenHash(byte[] tokenHash);
+
+    boolean existsByTokenHash(byte[] tokenHash);
 }
