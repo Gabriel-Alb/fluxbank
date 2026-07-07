@@ -6,13 +6,14 @@ import { RegisterPage } from '../pages/auth/RegisterPage'
 import { ResendVerificationPage } from '../pages/auth/ResendVerificationPage'
 import { VerifyEmailPage } from '../pages/auth/VerifyEmailPage'
 import { DashboardPage } from '../pages/dashboard/DashboardPage'
+import { HomePage } from '../pages/home/HomePage'
 
 export const router = createBrowserRouter([
   {
     path: '/',
     element: (
       <Navigate
-        to="/dashboard"
+        to="/home"
         replace
       />
     ),
@@ -46,6 +47,14 @@ export const router = createBrowserRouter([
     element: <VerifyEmailPage />,
   },
   {
+    path: '/home',
+    element: (
+      <RequireAuth>
+        <HomePage />
+      </RequireAuth>
+    ),
+  },
+  {
     path: '/dashboard',
     element: (
       <RequireAuth>
@@ -57,7 +66,7 @@ export const router = createBrowserRouter([
     path: '*',
     element: (
       <Navigate
-        to="/dashboard"
+        to="/home"
         replace
       />
     ),
